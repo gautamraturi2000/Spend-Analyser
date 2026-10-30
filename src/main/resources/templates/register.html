@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments :: head('Create account')"></head>
+<body>
+<div class="auth">
+  <span class="logo">&#8377; Spend Analyser</span>
+  <p class="sub" style="text-align:center">Create your free account.</p>
+  <div class="card">
+    <div class="alert error" th:if="${error}" th:text="${error}"></div>
+    <form th:action="@{/register}" method="post">
+      <label for="fullName">Your name</label>
+      <input id="fullName" name="fullName" type="text" th:value="${fullName}" maxlength="80" required>
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" th:value="${username}" maxlength="30" required>
+      <label for="password">Password (6+ characters)</label>
+      <input id="password" name="password" type="password" minlength="6" required>
+      <label for="confirm">Confirm password</label>
+      <input id="confirm" name="confirm" type="password" minlength="6" required>
+      <button class="btn" style="width:100%;margin-top:18px" type="submit">Create account</button>
+    </form>
+  </div>
+  <p style="text-align:center">Already registered? <a th:href="@{/login}">Log in</a></p>
+</div>
+</body>
+</html>

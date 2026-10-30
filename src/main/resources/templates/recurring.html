@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments :: head('Recurring')"></head>
+<body>
+<nav th:replace="fragments :: nav('recurring')"></nav>
+<main class="wrap">
+  <h1>Recurring bills &amp; income</h1>
+  <p class="sub">Rent, salary, subscriptions: add them once and the app records them automatically on the due date.</p>
+
+  <div class="alert error" th:if="${error}" th:text="${error}"></div>
+
+  <form class="card" method="post" th:action="@{/recurring}">
+    <h2>Add a recurring item</h2>
+    <div class="row">
+      <div>
+        <label for="type" style="margin-top:0">Type</label>
+        <select id="type" name="type">
+          <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.label}"></option>
+        </select>
+      </div>
+      <div>
+        <label for="category" style="margin-top:0">Category</label>
+        <select id="category" name="category"></select>
+      </div>
+      <div>
+        <label for="amount" style="margin-top:0">Amount (&#8377;)</label>
+        <input id="amount" name="amount" type="number" step="0.01" min="0.01" required>
+      </div>
+      <div>
+        <label for="frequency" style="margin-top:0">Repeats</label>
+        <select id="frequency" name="frequency">
+          <option th:each="f : ${frequencies}" th:value="${f.name()}" th:text="${f.label}" th:selected="${f.name() == 'MONTHLY'}"></option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="description">Note</label>
+        <input id="description" name="description" type="text" maxlength="200" placeholder="e.g. House rent">
+      </div>
+      <div>
+        <label for="startDate">First date</label>
+        <input id="startDate" name="startDate" type="date" th:value="${today}" required>
+      </div>
+      <div>
+        <label for="endDate">End date (optional)</label>
+        <input id="endDate" name="endDate" type="date">
+      </div>
+      <div style="flex:0"><button class="btn" type="submit">Add</button></div>
+    </div>
+  </form>
+
+  <div class="card">
+    <h2>Your recurring items</h2>
+    <div class="empty" th:if="${rows.isEmpty()}">Nothing yet. Add one above.</div>
+    <div class="scroll" th:if="${!rows.isEmpty()}">
+      <table>
+        <thead><tr><th>Item</th><th>Repeats</th><th>Next date</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr th:each="r : ${rows}">
+            <td>
+              <span class="pill" th:classappend="${r.rule.type.name() == 'INCOME'} ? 'income' : 'expense'" th:text="${r.rule.type.label}">Expense</span>
+              <strong th:text="${r.rule.category}">Rent</strong>
+              <span class="sub" style="margin:0" th:text="${r.rule.description}"></span>
+            </td>
+            <td th:text="${r.rule.frequency.label}">Monthly</td>
+            <td th:text="${r.next != null} ? ${r.next} : '-'">-</td>
+            <td class="num">&#8377;<span th:text="${#numbers.formatDecimal(r.rule.amount,1,'COMMA',2,'POINT')}">0</span></td>
+            <td><span class="pill" th:text="${r.rule.active} ? 'Active' : 'Paused/ended'">Active</span></td>
+            <td class="num">
+              <form class="inline" method="post" th:action="@{/recurring/{id}/toggle(id=${r.rule.id})}">
+                <button class="btn ghost sm" type="submit" th:text="${r.rule.active} ? 'Pause' : 'Resume'">Pause</button>
+              </form>
+              <form class="inline" method="post" th:action="@{/recurring/{id}/delete(id=${r.rule.id})}" onsubmit="return confirm('Delete this recurring item? Transactions already created are kept.')">
+                <button class="btn danger sm" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<script th:inline="javascript">
+  const cats = { EXPENSE: /*[[${expenseCats}]]*/ [], INCOME: /*[[${incomeCats}]]*/ [] };
+  const typeSel = document.getElementById('type');
+  const catSel = document.getElementById('category');
+  function fillCategories() {
+    catSel.innerHTML = '';
+    (cats[typeSel.value] || []).forEach(function (c) {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      catSel.appendChild(o);
+    });
+  }
+  typeSel.addEventListener('change', fillCategories);
+  fillCategories();
+</script>
+</body>
+</html>

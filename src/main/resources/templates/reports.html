@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments :: head('Reports')"></head>
+<body>
+<nav th:replace="fragments :: nav('reports')"></nav>
+<main class="wrap">
+  <div class="toolbar">
+    <h1>Yearly report</h1>
+    <span style="flex:1"></span>
+    <form method="get" th:action="@{/reports}" class="inline">
+      <select name="year" onchange="this.form.submit()" style="width:auto">
+        <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == year}"></option>
+      </select>
+    </form>
+    <a class="btn ghost" th:href="@{/reports/export(year=${year})}">Export CSV</a>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="card stat" style="margin:0">
+      <div class="label">Total income</div>
+      <div class="value good">&#8377;<span th:text="${#numbers.formatDecimal(stats.income,1,'COMMA',2,'POINT')}">0</span></div>
+    </div>
+    <div class="card stat" style="margin:0">
+      <div class="label">Total spent</div>
+      <div class="value bad">&#8377;<span th:text="${#numbers.formatDecimal(stats.expense,1,'COMMA',2,'POINT')}">0</span></div>
+      <div class="note">Average &#8377;<span th:text="${#numbers.formatDecimal(stats.avgMonthlyExpense,1,'COMMA',2,'POINT')}">0</span> per month</div>
+    </div>
+    <div class="card stat" style="margin:0">
+      <div class="label">Saved</div>
+      <div class="value" th:classappend="${stats.net.signum() >= 0} ? 'good' : 'bad'">&#8377;<span th:text="${#numbers.formatDecimal(stats.net,1,'COMMA',2,'POINT')}">0</span></div>
+      <div class="note"><span th:text="${stats.savingsRate}">0</span>% of income</div>
+    </div>
+    <div class="card stat" style="margin:0">
+      <div class="label">Highest spending month</div>
+      <div class="value" style="font-size:1.25rem" th:text="${stats.peakMonth}">-</div>
+      <div class="note">&#8377;<span th:text="${#numbers.formatDecimal(stats.peakExpense,1,'COMMA',2,'POINT')}">0</span></div>
+    </div>
+  </div>
+
+  <div class="empty card" th:if="${!hasData}">No transactions in this year yet.</div>
+
+  <div class="card" th:if="${hasData}">
+    <h2>Month by month</h2>
+    <div class="chart-box"><canvas id="yearChart"></canvas></div>
+  </div>
+
+  <div class="grid g2" th:if="${hasData}">
+    <div class="card">
+      <h2>Where the money went</h2>
+      <div class="chart-box"><canvas id="catChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Spending by category</h2>
+      <table>
+        <thead><tr><th>Category</th><th class="num">Spent</th><th class="num">Share</th></tr></thead>
+        <tbody>
+          <tr th:each="e : ${categoryRows}">
+            <td th:text="${e.category}">Food</td>
+            <td class="num">&#8377;<span th:text="${#numbers.formatDecimal(e.amount,1,'COMMA',2,'POINT')}">0</span></td>
+            <td class="num"><span th:text="${e.share}">0</span>%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" th:if="${hasData}">
+    <h2>Monthly table</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Month</th><th class="num">Income</th><th class="num">Spent</th><th class="num">Net</th><th class="num">Savings rate</th></tr></thead>
+        <tbody>
+          <tr th:each="m : ${months}">
+            <td><a th:href="@{/dashboard(month=${m.key})}" th:text="${m.label}">Jan 2026</a></td>
+            <td class="num good">&#8377;<span th:text="${#numbers.formatDecimal(m.income,1,'COMMA',2,'POINT')}">0</span></td>
+            <td class="num bad">&#8377;<span th:text="${#numbers.formatDecimal(m.expense,1,'COMMA',2,'POINT')}">0</span></td>
+            <td class="num" th:classappend="${m.net.signum() >= 0} ? 'good' : 'bad'">&#8377;<span th:text="${#numbers.formatDecimal(m.net,1,'COMMA',2,'POINT')}">0</span></td>
+            <td class="num"><span th:text="${m.savingsRate}">0</span>%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" th:if="${!biggest.isEmpty()}">
+    <h2>Five biggest expenses</h2>
+    <table>
+      <tbody>
+        <tr th:each="t : ${biggest}">
+          <td th:text="${t.txnDate}">2026-01-01</td>
+          <td th:text="${t.category}">Rent</td>
+          <td th:text="${t.description}"></td>
+          <td class="num bad">&#8377;<span th:text="${#numbers.formatDecimal(t.amount,1,'COMMA',2,'POINT')}">0</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+  const labels = /*[[${labels}]]*/ [];
+  const incomeSeries = /*[[${incomeSeries}]]*/ [];
+  const expenseSeries = /*[[${expenseSeries}]]*/ [];
+  const catLabels = /*[[${catLabels}]]*/ [];
+  const catValues = /*[[${catValues}]]*/ [];
+  const palette = ['#2f6fed','#e5484d','#f5a524','#1f9d55','#8e4ec6','#12a594','#e93d82','#ff8a3d','#697386','#3e63dd','#b5a300'];
+  if (window.Chart) {
+    const y = document.getElementById('yearChart');
+    if (y) {
+      new Chart(y, { type: 'line',
+        data: { labels: labels, datasets: [
+          { label: 'Income', data: incomeSeries, borderColor: '#1f9d55', backgroundColor: '#1f9d55', tension: .25 },
+          { label: 'Spent', data: expenseSeries, borderColor: '#e5484d', backgroundColor: '#e5484d', tension: .25 } ] },
+        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+    }
+    const c = document.getElementById('catChart');
+    if (c) {
+      new Chart(c, { type: 'doughnut',
+        data: { labels: catLabels, datasets: [{ data: catValues, backgroundColor: palette }] },
+        options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+    }
+  }
+</script>
+</body>
+</html>

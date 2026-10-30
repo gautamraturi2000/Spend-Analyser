@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments :: head('Log in')"></head>
+<body>
+<div class="auth">
+  <span class="logo">&#8377; Spend Analyser</span>
+  <p class="sub" style="text-align:center">Know where your money goes.</p>
+  <div class="card">
+    <div class="alert error" th:if="${param.error}">Wrong username or password.</div>
+    <div class="alert ok" th:if="${param.logout}">You have been logged out.</div>
+    <div class="alert ok" th:if="${param.registered}">Account created. Please log in.</div>
+    <form th:action="@{/login}" method="post">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" autofocus required>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required>
+      <button class="btn" style="width:100%;margin-top:18px" type="submit">Log in</button>
+    </form>
+  </div>
+  <p style="text-align:center">New here? <a th:href="@{/register}">Create an account</a></p>
+</div>
+</body>
+</html>

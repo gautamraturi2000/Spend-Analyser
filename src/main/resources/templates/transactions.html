@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments :: head('Transactions')"></head>
+<body>
+<nav th:replace="fragments :: nav('transactions')"></nav>
+<main class="wrap">
+  <div class="toolbar">
+    <h1>Transactions</h1>
+    <span style="flex:1"></span>
+    <a class="btn" th:href="@{/transactions/new}">+ Add transaction</a>
+    <a class="btn ghost" th:href="@{/transactions/export(month=${month},type=${type},category=${category},q=${q})}">Export CSV</a>
+  </div>
+
+  <form class="card" method="get" th:action="@{/transactions}">
+    <div class="row">
+      <div>
+        <label for="month" style="margin-top:0">Month <span class="sub" style="margin:0;font-weight:400">(clear for all time)</span></label>
+        <input id="month" type="month" name="month" th:value="${month}">
+      </div>
+      <div>
+        <label for="type" style="margin-top:0">Type</label>
+        <select id="type" name="type">
+          <option value="">All</option>
+          <option value="EXPENSE" th:selected="${type == 'EXPENSE'}">Expense</option>
+          <option value="INCOME" th:selected="${type == 'INCOME'}">Income</option>
+        </select>
+      </div>
+      <div>
+        <label for="category" style="margin-top:0">Category</label>
+        <select id="category" name="category">
+          <option value="">All</option>
+          <option th:each="c : ${allCategories}" th:value="${c}" th:text="${c}" th:selected="${c == category}"></option>
+        </select>
+      </div>
+      <div>
+        <label for="q" style="margin-top:0">Search</label>
+        <input id="q" type="text" name="q" th:value="${q}" placeholder="note or category">
+      </div>
+      <div style="flex:0"><button class="btn" type="submit">Filter</button></div>
+    </div>
+  </form>
+
+  <div class="card">
+    <p class="sub" style="margin-bottom:12px">
+      <span th:text="${list.size()}">0</span> transactions &middot;
+      Income <strong class="good">&#8377;<span th:text="${#numbers.formatDecimal(income,1,'COMMA',2,'POINT')}">0</span></strong> &middot;
+      Spent <strong class="bad">&#8377;<span th:text="${#numbers.formatDecimal(expense,1,'COMMA',2,'POINT')}">0</span></strong>
+    </p>
+    <div class="empty" th:if="${list.isEmpty()}">No transactions match. <a th:href="@{/transactions/new}">Add one</a>.</div>
+    <div class="scroll" th:if="${!list.isEmpty()}">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead>
+        <tbody>
+          <tr th:each="t : ${list}">
+            <td th:text="${t.txnDate}">2026-10-01</td>
+            <td><span class="pill" th:classappend="${t.type.name() == 'INCOME'} ? 'income' : 'expense'" th:text="${t.type.label}">Expense</span></td>
+            <td th:text="${t.category}">Food</td>
+            <td><span th:text="${t.description}"></span> <span class="pill" th:if="${t.ruleId != null}">auto</span></td>
+            <td class="num" th:classappend="${t.type.name() == 'INCOME'} ? 'good' : 'bad'">
+              <span th:text="${t.type.name() == 'INCOME'} ? '+' : '-'">-</span>&#8377;<span th:text="${#numbers.formatDecimal(t.amount,1,'COMMA',2,'POINT')}">0</span>
+            </td>
+            <td class="num">
+              <a class="btn ghost sm" th:href="@{/transactions/{id}/edit(id=${t.id})}">Edit</a>
+              <form class="inline" method="post" th:action="@{/transactions/{id}/delete(id=${t.id})}" onsubmit="return confirm('Delete this transaction?')">
+                <button class="btn danger sm" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments :: head('Dashboard')"></head>
+<body>
+<nav th:replace="fragments :: nav('dashboard')"></nav>
+<main class="wrap">
+  <div class="toolbar">
+    <div>
+      <h1 th:text="${monthLabel}">October 2026</h1>
+    </div>
+    <span class="spacer" style="flex:1"></span>
+    <div class="monthnav">
+      <a class="btn ghost sm" th:href="@{/dashboard(month=${prevMonth})}">&larr;</a>
+      <form method="get" th:action="@{/dashboard}" class="inline">
+        <input type="month" name="month" th:value="${month}" onchange="this.form.submit()">
+      </form>
+      <a class="btn ghost sm" th:href="@{/dashboard(month=${nextMonth})}">&rarr;</a>
+    </div>
+    <a class="btn" th:href="@{/transactions/new}">+ Add expense</a>
+    <a class="btn ghost" th:href="@{/transactions/new(type='INCOME')}">+ Add income</a>
+  </div>
+
+  <div class="alert warn" th:each="a : ${alerts}"
+       th:if="${a.level == 'warn'}">
+    <strong th:text="${a.category}">Food</strong> budget: you have used
+    <strong th:text="${a.percent} + '%'">85%</strong>
+    (&#8377;<span th:text="${#numbers.formatDecimal(a.spent,1,'COMMA',2,'POINT')}">0</span> of
+    &#8377;<span th:text="${#numbers.formatDecimal(a.limit,1,'COMMA',2,'POINT')}">0</span>).
+  </div>
+  <div class="alert error" th:each="a : ${alerts}"
+       th:if="${a.level == 'over'}">
+    <strong th:text="${a.category}">Food</strong> budget exceeded by
+    &#8377;<span th:text="${#numbers.formatDecimal(a.spent.subtract(a.limit),1,'COMMA',2,'POINT')}">0</span>
+    (<span th:text="${a.percent}">120</span>% used).
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="card stat" style="margin:0">
+      <div class="label">Income</div>
+      <div class="value good">&#8377;<span th:text="${#numbers.formatDecimal(income,1,'COMMA',2,'POINT')}">0</span></div>
+    </div>
+    <div class="card stat" style="margin:0">
+      <div class="label">Spent</div>
+      <div class="value bad">&#8377;<span th:text="${#numbers.formatDecimal(expense,1,'COMMA',2,'POINT')}">0</span></div>
+      <div class="note" th:if="${expenseChange != null}">
+        <span th:class="${expenseChange.signum() > 0} ? 'bad' : 'good'"
+              th:text="${(expenseChange.signum() > 0 ? '+' : '') + expenseChange + '%'}">+5%</span>
+        vs previous month
+      </div>
+      <div class="note" th:if="${forecast != null}">
+        On track for &#8377;<span th:text="${#numbers.formatDecimal(forecast,1,'COMMA',0,'POINT')}">0</span> this month
+      </div>
+    </div>
+    <div class="card stat" style="margin:0">
+      <div class="label">Balance</div>
+      <div class="value" th:classappend="${balance.signum() >= 0} ? 'good' : 'bad'">&#8377;<span th:text="${#numbers.formatDecimal(balance,1,'COMMA',2,'POINT')}">0</span></div>
+    </div>
+    <div class="card stat" style="margin:0">
+      <div class="label">Savings rate</div>
+      <div class="value"><span th:text="${savingsRate}">0</span>%</div>
+      <div class="note">of income saved</div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h2>Spending by category</h2>
+      <div class="chart-box" th:if="${!catLabels.isEmpty()}"><canvas id="catChart"></canvas></div>
+      <div class="empty" th:if="${catLabels.isEmpty()}">No expenses in this month yet.</div>
+    </div>
+    <div class="card">
+      <h2>Last 6 months</h2>
+      <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="toolbar" style="margin-bottom:10px"><h2 style="margin:0">Budgets</h2><span style="flex:1"></span><a class="btn ghost sm" th:href="@{/budgets}">Manage</a></div>
+      <div class="empty" th:if="${budgets.isEmpty()}">No budgets yet. <a th:href="@{/budgets}">Set one</a> to get alerts.</div>
+      <div class="budget" th:each="b : ${budgets}">
+        <div class="top">
+          <span th:text="${b.category}">Food</span>
+          <span><span th:text="${b.percent}">0</span>%</span>
+        </div>
+        <div class="bar" th:classappend="${b.level != 'ok'} ? ${b.level}"><span th:style="'width:' + ${b.barPercent} + '%'"></span></div>
+        <div class="meta">&#8377;<span th:text="${#numbers.formatDecimal(b.spent,1,'COMMA',2,'POINT')}">0</span> of &#8377;<span th:text="${#numbers.formatDecimal(b.limit,1,'COMMA',2,'POINT')}">0</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="toolbar" style="margin-bottom:10px"><h2 style="margin:0">Recent transactions</h2><span style="flex:1"></span><a class="btn ghost sm" th:href="@{/transactions(month=${month})}">View all</a></div>
+      <div class="empty" th:if="${recent.isEmpty()}">Nothing here yet. Add your first transaction.</div>
+      <div class="scroll" th:if="${!recent.isEmpty()}">
+        <table>
+          <tbody>
+            <tr th:each="t : ${recent}">
+              <td><span th:text="${t.txnDate}">2026-10-01</span></td>
+              <td><span th:text="${t.category}">Food</span><br><span class="sub" style="margin:0;font-size:.82rem" th:text="${t.description}"></span></td>
+              <td class="num" th:classappend="${t.type.name() == 'INCOME'} ? 'good' : 'bad'">
+                <span th:text="${t.type.name() == 'INCOME'} ? '+' : '-'">-</span>&#8377;<span th:text="${#numbers.formatDecimal(t.amount,1,'COMMA',2,'POINT')}">0</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+  const catLabels = /*[[${catLabels}]]*/ [];
+  const catValues = /*[[${catValues}]]*/ [];
+  const trendLabels = /*[[${trendLabels}]]*/ [];
+  const trendIncome = /*[[${trendIncome}]]*/ [];
+  const trendExpense = /*[[${trendExpense}]]*/ [];
+  const palette = ['#2f6fed','#e5484d','#f5a524','#1f9d55','#8e4ec6','#12a594','#e93d82','#ff8a3d','#697386','#3e63dd','#b5a300'];
+  if (window.Chart) {
+    const catEl = document.getElementById('catChart');
+    if (catEl) {
+      new Chart(catEl, { type: 'doughnut',
+        data: { labels: catLabels, datasets: [{ data: catValues, backgroundColor: palette }] },
+        options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+    }
+    new Chart(document.getElementById('trendChart'), { type: 'bar',
+      data: { labels: trendLabels, datasets: [
+        { label: 'Income', data: trendIncome, backgroundColor: '#1f9d55' },
+        { label: 'Spent', data: trendExpense, backgroundColor: '#e5484d' } ] },
+      options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+  }
+</script>
+</body>
+</html>

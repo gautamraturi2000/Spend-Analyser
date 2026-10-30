@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments :: head('Transaction')"></head>
+<body>
+<nav th:replace="fragments :: nav('transactions')"></nav>
+<main class="wrap" style="max-width:560px">
+  <h1 th:text="${editId == null} ? 'Add transaction' : 'Edit transaction'">Add transaction</h1>
+  <p class="sub">Record money you spent or received.</p>
+  <div class="card">
+    <div class="alert error" th:if="${error}" th:text="${error}"></div>
+    <form method="post" th:object="${form}"
+          th:action="${editId != null} ? @{/transactions/{id}(id=${editId})} : @{/transactions}">
+      <label for="type" style="margin-top:0">Type</label>
+      <select name="type" id="type">
+        <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.label}" th:selected="${t == form.type}"></option>
+      </select>
+
+      <label for="amount">Amount (&#8377;)</label>
+      <input id="amount" name="amount" type="number" step="0.01" min="0.01" th:value="${form.amount}" required>
+
+      <label for="category">Category</label>
+      <select name="category" id="category" th:attr="data-selected=${form.category}"></select>
+
+      <label for="description">Note (optional)</label>
+      <input id="description" name="description" type="text" maxlength="200" th:value="${form.description}">
+
+      <label for="date">Date</label>
+      <input id="date" name="date" type="date" th:value="${form.date}" required>
+
+      <div style="margin-top:20px;display:flex;gap:10px">
+        <button class="btn" type="submit">Save</button>
+        <a class="btn ghost" th:href="@{/transactions}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</main>
+<script th:inline="javascript">
+  const cats = { EXPENSE: /*[[${expenseCats}]]*/ [], INCOME: /*[[${incomeCats}]]*/ [] };
+  const typeSel = document.getElementById('type');
+  const catSel = document.getElementById('category');
+  function fillCategories() {
+    const wanted = catSel.dataset.selected || catSel.value;
+    catSel.innerHTML = '';
+    (cats[typeSel.value] || []).forEach(function (c) {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      if (c === wanted) { o.selected = true; }
+      catSel.appendChild(o);
+    });
+    catSel.dataset.selected = '';
+  }
+  typeSel.addEventListener('change', fillCategories);
+  fillCategories();
+</script>
+</body>
+</html>

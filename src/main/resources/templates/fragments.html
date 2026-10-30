@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title} + ' - Spend Analyser'">Spend Analyser</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<nav class="nav" th:fragment="nav(active)">
+  <div class="nav-in">
+    <a class="logo" th:href="@{/dashboard}">&#8377; Spend Analyser</a>
+    <a class="link" th:classappend="${active == 'dashboard'} ? 'active'" th:href="@{/dashboard}">Dashboard</a>
+    <a class="link" th:classappend="${active == 'transactions'} ? 'active'" th:href="@{/transactions}">Transactions</a>
+    <a class="link" th:classappend="${active == 'budgets'} ? 'active'" th:href="@{/budgets}">Budgets</a>
+    <a class="link" th:classappend="${active == 'recurring'} ? 'active'" th:href="@{/recurring}">Recurring</a>
+    <a class="link" th:classappend="${active == 'reports'} ? 'active'" th:href="@{/reports}">Reports</a>
+    <span class="spacer"></span>
+    <span class="who" th:text="${currentName}">User</span>
+    <form th:action="@{/logout}" method="post"><button class="btn ghost sm" type="submit">Log out</button></form>
+  </div>
+</nav>
+</body>
+</html>
